@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 
 class PixelCNN:
 	"""
-		PixelCNN Model Layers and functions need to train (i.e. loss function, optimizer, etc.)
+		PixelCNN Model Layers and functions needed to train (i.e. loss function, optimizer, etc.)
 	"""
 	def __init__(self,
-	 					inputs,
-						height,
-						width,
-						channels):
+				inputs,
+				height,
+				width,
+				channels):
 		self.inputs = inputs
 		self.height = height
 		self.width = width
@@ -19,15 +19,29 @@ class PixelCNN:
 
 
 	def conv2d_layer(self,
-								inputs,
-							 	kernel_shape,
-								bias_shape,
-								strides,
-								mask_type,
-								scope):
+					inputs,
+					kernel_shape,
+					bias_shape,
+					strides,
+					mask_type,
+					scope):
+		"""
+			Convolves each input with a set of filters.
+
+			Args:
+				inputs:
+				kernel_shape:
+				bias_shape:
+				strides:
+				mask_type:
+				scope:
+
+			Returns:
+				pre_activation:
+		"""
 		with tf.variable_scope(scope):
 			weights = tf.get_variable(name='weights', shape=kernel_shape, dtype=tf.float32,
-													 initializer=tf.glorot_uniform_inializer())
+									initializer=tf.glorot_uniform_inializer())
 
 			if mask_type != None:  # use convolution mask
 				mask = np.ones(kernel_shape).astype('f')
@@ -52,7 +66,7 @@ class PixelCNN:
 
 			# adjust output with a bias term
 			biases = tf.get_variable(name='biases', shape=bias_shape, dtype=tf.float32,
-												  initializer=tf.constant_initializer(0))
+									initializer=tf.constant_initializer(0.0))
 
 			pre_activation = tf.nn.bias_add(conv2d, biases, name='conv2d_preact')
 
@@ -60,9 +74,9 @@ class PixelCNN:
 
 
 	def activation_fn(self,
-	 							inputs,
-								fn,
-								scope):
+					inputs,
+					fn,
+					scope):
 		"""
 			Applies non-linear activation function to layer.
 
@@ -81,10 +95,10 @@ class PixelCNN:
 
 
 	def residual_block(self,
-								   inputs,
-								   features,
-								   scope,
-								   mask_type='B'):
+					inputs,
+					features,
+					scope,
+					mask_type='B'):
 		"""
 			Residual Block for PixelCNN architecture.
 
@@ -124,16 +138,55 @@ class PixelCNN:
 
 
 	def batch_norm(self,
-							  inputs,
-	                          is_training):
-		pass
+				inputs,
+				is_training,
+				scope):
+		"""
+			Performs batch normalization on the input layer.
+		"""
+		with tf.variable_scope(scope):
+			batch_norm = tf.layers.batch_normalization(inputs, is_training=is_training,
+													   name='batch_norm')
+
+		return batch_norm
+
+
+	def dropout(self,
+				inputs
+				drop_rate,
+				is_training,
+				scope):
+		"""
+			Performs dropout on the input layer.
+		"""
+		with tf.variable_scope(scope):
+			drop = tf.layers.dropout(inputs, rate=drop_rate, training=is_training,
+									 name='dropout')
 
 
 	def loss_fn(self,
-					   inputs):
-		pass
+				inputs,
+				labels,
+				scope):
+		"""
+			Calculates the average loss of all the predicted pixels in an image
+		"""
+		with tf.variable_scope(scope):
+			loss_distribution = tf.nn.sigmoid_cross_entropy_with_logits(logits=inputs,
+															labels=labels, name='loss')
+			loss = tf.reduce_mean(loss_distribution)
+
+		return loss
 
 
 	def optimizer(self,
-						   loss):
-		pass
+				loss,
+				learning_rate
+				scope):
+		"""
+			Update weights and biases of network to minimize loss
+		"""
+		with tf.variable_scope(scope):
+			optimize = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+
+		return optimize
