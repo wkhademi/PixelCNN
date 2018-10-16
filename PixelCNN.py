@@ -97,6 +97,7 @@ class PixelCNN:
 	def residual_block(self,
 					inputs,
 					features,
+					is_training,
 					scope,
 					mask_type='B'):
 		"""
@@ -105,6 +106,7 @@ class PixelCNN:
 			Args:
 				inputs: batch of images
 				features: num features in the input and output layer
+				is_training: whether model is in training phase or not
 				scope: residual block scope
 				mask_type: weight mask type for convolution layers
 
@@ -116,20 +118,23 @@ class PixelCNN:
 			kernel_shape = [1, 1, features, features/2]
 			bias_shape = [features/2]
 			strides = [1, 1, 1, 1]
-			conv1 = conv2d_layer(inputs, kernel_shape, bias_shape, strides, mask_type, 'res_conv1')
-			conv1_out = activation_fn(conv1, tf.nn.relu, 'res_act1')
+			conv1 = self.conv2d_layer(inputs, kernel_shape, bias_shape, strides, mask_type, 'res_conv1')
+			conv1_batch = self.batch_norm(conv1, is_training, 'res_batch1')
+			conv1_out = self.activation_fn(conv1_batch, tf.nn.relu, 'res_act1')
 
 			# convolution layer
 			kernel_shape = [3, 3, features/2, features/2]
 			bias_shape = [features/2]
-			conv2 = conv2d_layer(conv1_out, kernel_shape, bias_shape, strides, mask_type, 'res_conv2')
-			conv2_out = activation_fn(conv2, tf.nn.relu, 'res_act2')
+			conv2 = self.conv2d_layer(conv1_out, kernel_shape, bias_shape, strides, mask_type, 'res_conv2')
+			conv2_batch = self.batch_norm(conv2, is_training, 'res_batch2')
+			conv2_out = self.activation_fn(conv2_batch, tf.nn.relu, 'res_act2')
 
 			# upsample features from num_features -> 2*num_features
 			kernel_shape = [1, 1, features/2, features]
 			bias_shape = [features]
-			conv3 = conv2d_layer(conv2_out, kernel_shape, bias_shape, strides, mask_type, 'res_conv3')
-			conv3_out = activation_fn(conv3, tf.nn.relu, 'res_act3')
+			conv3 = self.conv2d_layer(conv2_out, kernel_shape, bias_shape, strides, mask_type, 'res_conv3')
+			conv3_batch = self.batch_norm(conv3, is_training, 'res_batch3')
+			conv3_out = self.activation_fn(conv3_batch, tf.nn.relu, 'res_act3')
 
 			# add input map to output map
 			res_output = inputs + conv3_out
