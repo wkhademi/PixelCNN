@@ -71,7 +71,7 @@ def run(config):
 	elif (config == '--MNIST'):
 		height, width, channels = (28, 28, 1)
 
-	network = Network(train_images, test_images, height, width, channels)
+	network = Network(train_images, test_images, height, width, channels, config)
 
 if __name__ == '__main__':
 	config = sys.argv[1]

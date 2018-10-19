@@ -8,12 +8,14 @@ class Network:
 			test_inputs,
 			height,
 			width,
-			channels):
+			channels,
+            config):
 		self.train_inputs = train_inputs
 		self.test_inputs = test_inputs
 		self.height = height
 		self.width = width
 		self.channels = channels
+        self.config = config
 		self.num_residuals = 4
 		self.learning_rate = 1e-5
 		self.network = None  # network graph will be built during training or testing phase
@@ -29,11 +31,17 @@ class Network:
 		"""
 			Build the 16 layer PixelCNN network.
 		"""
-		pixelCNNModel = PixelCNN(inputs, self.height, self.width, self.channels)
+		pixelCNNModel = PixelCNN(inputs, self.height, self.width, self.channels,
+                                self.config)
 
 		# First layer in the network
-		kernel_shape = [7, 7, self.channels, 32]
-		bias_shape = [32]
+        if (self.config == '--MNIST'):
+		    kernel_shape = [7, 7, self.channels, 32]
+		    bias_shape = [32]
+        elif (self.config == '--CIFAR'):
+            kernel_shape = [7, 7, self.channels, 96]
+            bias_shape = [96]
+
 		strides = [1, 1, 1, 1]
 		mask_type = 'A'
 		network = pixelCNNModel.conv2d_layer(inputs, kernel_shape, bias_shape,
@@ -41,14 +49,23 @@ class Network:
 		network = pixelCNNModel.batch_norm(network, is_training, 'conv1_batch')
 		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'conv1_act')
 
-		# 3 Residual Blocks in the network
+		# 4 Residual Blocks in the network
 		for idx in xrange(self.num_residuals):
 			scope = 'res' + str(idx)
-			network = pixelCNNModel.residual_block(network, 32, scope)
+            
+            if (self.config == '--MNIST'):
+			    network = pixelCNNModel.residual_block(network, 32, scope)
+            elif (self.config == '--CIFAR'):
+                network = pixelCNNModel.residual_block(network, 96, scope)
 
 		# Final 2 Hidden Layers in the network
-		kernel_shape = [1, 1, 32, 32]
-		bias_shape = [32]
+        if (self.config == '--MNIST'):
+		    kernel_shape = [1, 1, 32, 32]
+		    bias_shape = [32]
+        elif (self.config == '--CIFAR'):
+            kernel_shape = [1, 1, 96, 96]
+            bias_shape = [96]
+
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
 		for idx in xrange(2):
@@ -59,8 +76,12 @@ class Network:
 			network = pixelCNNModel.activation_fn(network, tf.nn.relu, scope+'_act')
 
 		# Final Layer in the network
-		kernel_shape = [1, 1, 32, self.channels]
-		bias_shape = [self.channels]
+        if (self.config == '--MNIST'):
+		    kernel_shape = [1, 1, 32, self.channels]
+        elif (self.config == '--CIFAR'):
+            kernel_shape = [1, 1, 96, self.channels]
+
+        bias_shape = [self.channels]
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
 		network = pixelCNNModel.conv2d_layer(inputs, kernel_shape, bias_shape,

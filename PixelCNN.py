@@ -11,11 +11,13 @@ class PixelCNN:
 				inputs,
 				height,
 				width,
-				channels):
+				channels,
+				config):
 		self.inputs = inputs
 		self.height = height
 		self.width = width
 		self.channels = channels
+		self.config = config
 
 
 	def conv2d_layer(self,
@@ -177,8 +179,13 @@ class PixelCNN:
 			Calculates the average loss of all the predicted pixels in an image
 		"""
 		with tf.variable_scope(scope):
-			loss_distribution = tf.nn.sigmoid_cross_entropy_with_logits(logits=inputs,
-															labels=labels, name='loss')
+			if (self.config == '--MNIST'):
+				loss_distribution = tf.nn.sigmoid_cross_entropy_with_logits(logits=inputs,
+																labels=labels, name='loss')
+			elif (self.config == '--CIFAR'):
+				loss_distribution = tf.nn.softmax_cross_entropy_with_logits_v2(logits=inputs,
+																labels=labels, name='loss')
+
 			loss = tf.reduce_mean(loss_distribution)
 
 		return loss
