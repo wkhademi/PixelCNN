@@ -60,18 +60,24 @@ def retrieve_data(config):
 	train_images = 2 * (train_images / 255.0) - 1
 	test_images = 2 * (test_images / 255.0) - 1
 
-	return train_images, test_images
+	# create set of images with missing region
+	trimmed_test_images = test_images
+	starting_trim = trimmed_test_images.shape[1]/2
+	trimmed_test_images[:, starting_trim:, :, :] = -1.0
+
+	return train_images, test_images, trimmed_test_images
 
 
 def run(config):
-	train_images, test_images = retrieve_data(config)
+	train_images, test_images, trimmed_test_images = retrieve_data(config)
 
 	if (config == '--CIFAR'):
 		height, width, channels = (32, 32, 3)
 	elif (config == '--MNIST'):
 		height, width, channels = (28, 28, 1)
 
-	network = Network(train_images, test_images, height, width, channels, config)
+	network = Network(train_images, test_images, trimmed_test_images, height,
+				width, channels, config)
 
 if __name__ == '__main__':
 	config = sys.argv[1]

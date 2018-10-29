@@ -57,25 +57,25 @@ class PixelCNN:
 				mask[h_center, w_center+1:, :, :] = 0.0
 
 				# tie channel inputs to each other and itself
-                # Note: blue channel retains all center pixel information
+				# Note: blue channel retains all center pixel information
 				if (self.config == '--CIFAR'):
-                    red_filter_end = kernel_shape[3]/3
-                    mask[h_center, w_center, 1:, :red_filter_end] = 0.0
+					red_filter_end = kernel_shape[3]/3
+					mask[h_center, w_center, 1:, :red_filter_end] = 0.0
 
-                    green_filter_end = 2*red_filter_end
-                    mask[h_center, w_center, 2:, red_filter_end:green_filter_end] = 0.0
+					green_filter_end = 2*red_filter_end
+					mask[h_center, w_center, 2:, red_filter_end:green_filter_end] = 0.0
 
-                # remove center pixel information availability
+				# remove center pixel information availability
 				if (mask == 'a'):
-                    if (self.config == '--MNIST'):
-					    mask[h_center, w_center, :, :] = 0.0
-                    elif (self.config == '--CIFAR'): # tie channel inputs to each other
-                        mask[h_center, w_center, :, :red_filter_end] = 0.0
+					if (self.config == '--MNIST'):
+						mask[h_center, w_center, :, :] = 0.0
+					elif (self.config == '--CIFAR'): # tie channel inputs to each other
+						mask[h_center, w_center, :, :red_filter_end] = 0.0
 
-                        mask[h_center, w_center, 1:, red_filter_end:green_filter_end] = 0.0
+						mask[h_center, w_center, 1:, red_filter_end:green_filter_end] = 0.0
 
-                        blue_filter_end = kernel_shape[3]
-                        mask[h_center, w_center, 2:, green_filter_end:blue_filter_end] = 0.0
+						blue_filter_end = kernel_shape[3]
+						mask[h_center, w_center, 2:, green_filter_end:blue_filter_end] = 0.0
 
 				# update weights with mask
 				weights = tf.multiply(weights, tf.constant(mask, dtype=tf.float32))
