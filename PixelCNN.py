@@ -43,7 +43,7 @@ class PixelCNN:
 		"""
 		with tf.variable_scope(scope):
 			weights = tf.get_variable(name='weights', shape=kernel_shape, dtype=tf.float32,
-									initializer=tf.glorot_uniform_inializer())
+									initializer=tf.glorot_uniform_initializer())
 
 			if mask_type != None:  # use convolution mask
 				mask = np.ones(kernel_shape).astype('f')
@@ -66,7 +66,7 @@ class PixelCNN:
 					mask[h_center, w_center, 2:, red_filter_end:green_filter_end] = 0.0
 
 				# remove center pixel information availability
-				if (mask == 'a'):
+				if (mask_type == 'a'):
 					if (self.config == '--MNIST'):
 						mask[h_center, w_center, :, :] = 0.0
 					elif (self.config == '--CIFAR'): # tie channel inputs to each other
@@ -170,14 +170,14 @@ class PixelCNN:
 			Performs batch normalization on the input layer.
 		"""
 		with tf.variable_scope(scope):
-			batch_norm = tf.layers.batch_normalization(inputs, is_training=is_training,
+			batch_norm = tf.layers.batch_normalization(inputs, training=is_training,
 													   name='batch_norm')
 
 		return batch_norm
 
 
 	def dropout(self,
-				inputs
+				inputs,
 				drop_rate,
 				is_training,
 				scope):
@@ -198,11 +198,11 @@ class PixelCNN:
 		"""
 		with tf.variable_scope(scope):
 			if (self.config == '--MNIST'):
-				loss_distribution = tf.nn.sigmoid_cross_entropy_with_logits(logits=inputs,
-																labels=labels, name='loss')
+				loss_distribution = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels,
+																logits=inputs, name='loss')
 			elif (self.config == '--CIFAR'):
-				loss_distribution = tf.nn.softmax_cross_entropy_with_logits_v2(logits=inputs,
-																labels=labels, name='loss')
+				loss_distribution = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels,
+																logits=inputs, name='loss')
 
 			loss = tf.reduce_mean(loss_distribution)
 
@@ -211,7 +211,7 @@ class PixelCNN:
 
 	def optimizer(self,
 				loss,
-				learning_rate
+				learning_rate,
 				scope):
 		"""
 			Update weights and biases of network to minimize loss
@@ -220,3 +220,14 @@ class PixelCNN:
 			optimize = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
 		return optimize
+
+
+	def flatten(self,
+				inputs,
+				scope):
+		with tf.variable_scope(scope):
+			shape = inputs.get_shape().as_list()
+			new_shape = [-1, shape[1]*shape[2]*shape[3]]
+			flat = tf.reshape(inputs, new_shape)
+
+		return flat

@@ -1,12 +1,13 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from PixelCNN import PixelCNN
 
 class Network:
 	def __init__(self,
 			train_inputs,
 			test_inputs,
-			trimmed_test_inputs
+			trimmed_test_inputs,
 			height,
 			width,
 			channels,
@@ -20,6 +21,8 @@ class Network:
 		self.config = config
 		self.num_residuals = 4
 		self.learning_rate = 1e-5
+		self.num_epochs = 10
+		self.batch_size = 32
 		self.network = None  # network graph will be built during training or testing phase
 		self.loss = None # will be added to graph during training or testing phase
 		self.optimizer = None # will be added to graph during training phase
@@ -29,7 +32,8 @@ class Network:
 					inputs,
 					labels,
 					is_training,
-					dropout):
+					dropout,
+					train):
 		"""
 			Build the 16 layer PixelCNN network.
 		"""
@@ -56,9 +60,9 @@ class Network:
 			scope = 'res' + str(idx)
 
 			if (self.config == '--MNIST'):
-				network = pixelCNNModel.residual_block(network, 32, scope)
+				network = pixelCNNModel.residual_block(network, 32, is_training, scope)
 			elif (self.config == '--CIFAR'):
-				network = pixelCNNModel.residual_block(network, 96, scope)
+				network = pixelCNNModel.residual_block(network, 96, is_training, scope)
 
 		# Final 2 Hidden Layers in the network
 		if (self.config == '--MNIST'):
@@ -86,18 +90,41 @@ class Network:
 		bias_shape = [self.channels]
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
-		network = pixelCNNModel.conv2d_layer(inputs, kernel_shape, bias_shape,
-											strides, mask_type, 'conv1')
-		network = pixelCNNModel.batch_norm(network, is_training, 'conv1_batch')
-		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'conv1_act')
+		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape,
+											strides, mask_type, 'conv16')
+		network = pixelCNNModel.batch_norm(network, is_training, 'conv16_batch')
+
+		# flatten layer to be able to compute loss
+		network = pixelCNNModel.flatten(network, 'flatten')
 
 		self.network = network
 
-		if (is_training):
-			self.loss = pixelCNNModel.loss_fn(inputs, labels, 'train_loss')
-			self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
+		if (train == 'train'):
+			update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+
+			with tf.control_dependencies(update_ops):
+				self.loss = pixelCNNModel.loss_fn(inputs, labels, 'train_loss')
+				self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
 		else:
 			self.loss = pixelCNNModel.loss_fn(inputs, labels, 'test_loss')
+
+
+	def generate_batch(self,
+						batch_index,
+						inputs):
+		"""
+			Generate next batch of inputs to feed into network. If batch size is
+			greater than amount of inputs left, just take leftover inputs.
+		"""
+		num_inputs = inputs.get_shape().as_list()[0]
+
+		# make sure full batch of inputs can be taken from dataset
+		if (self.batch_size*(batch_index+1) < num_inputs):
+			image_batch = inputs[self.batch_size*batch_index:self.batch_size*(batch_index+1),:,:,:]
+		else:
+			image_batch = inputs[self.batch_size*batch_index:num_inputs,:,:,:]
+
+		return image_batch
 
 
 	def test(self,
@@ -120,11 +147,11 @@ class Network:
 				is_training: The model is in the training phase
 		"""
 		# input images for the model to train on
-		x = tf.placeholder(tf.float32, shape=(-1, self.height, self.width,
+		x = tf.placeholder(tf.float32, shape=(None, self.height, self.width,
 							self.channels), name='inputs')
 
 		# correct images for the model to check against when learning
-		y = tf.placeholder(tf.float32, shape=(-1, self.height, self.width,
+		y = tf.placeholder(tf.float32, shape=(None, self.height, self.width,
 							self.channels), name='correct_images')
 
 		# model is in the training phase
@@ -134,7 +161,26 @@ class Network:
 		dropout = tf.placeholder(tf.float32, name='drop_rate')
 
 		# build out the network architecture
-		self.build_network(x, y, is_training, dropout)
+		self.build_network(x, y, is_training, dropout, 'train')
 
+		# start session and train PixelCNN
 		with tf.Session() as sess:
 			sess.run(tf.global_variables_initializer())
+
+			num_batches = inputs.get_shape().as_list()[0]/self.batch_size
+			average_loss = 0
+
+			for epoch_idx in range(num_epochs):
+				epoch_loss = 0
+
+				for batch_idx in range(num_batches):
+					image_batch = self.generate_batch(batch_idx, inputs)
+
+					loss, _ = sess.run([self.loss, self.optimizer],
+									   feed_dict={x: inputs, y: labels,
+												  is_training: is_training, dropout: 0.2})
+
+					epoch_loss += loss
+
+				average_loss = epoch_loss / num_batches
+				print('Average Loss: ', average_loss, ' for epoch ', epoch_idx+1)

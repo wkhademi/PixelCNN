@@ -1,9 +1,10 @@
+import sys
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.examples.tutorials.mnist import input_data
-import sys
+from network import Network
 
 
 def unpickle(file):
@@ -71,6 +72,9 @@ def retrieve_data(config):
 def run(config):
 	train_images, test_images, trimmed_test_images = retrieve_data(config)
 
+	labels = train_images
+	labels = np.reshape(labels, (labels.shape[0], labels.shape[1]*labels.shape[2]*labels.shape[3]))
+
 	if (config == '--CIFAR'):
 		height, width, channels = (32, 32, 3)
 	elif (config == '--MNIST'):
@@ -78,6 +82,8 @@ def run(config):
 
 	network = Network(train_images, test_images, trimmed_test_images, height,
 				width, channels, config)
+
+	network.train(train_images, labels)
 
 if __name__ == '__main__':
 	config = sys.argv[1]
