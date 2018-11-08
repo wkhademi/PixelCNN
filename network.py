@@ -26,6 +26,7 @@ class Network:
 		self.network = None  # network graph will be built during training or testing phase
 		self.loss = None # will be added to graph during training or testing phase
 		self.optimizer = None # will be added to graph during training phase
+		self.output = None
 
 
 	def build_network(self,
@@ -103,6 +104,7 @@ class Network:
 				self.loss = pixelCNNModel.loss_fn(network, labels, 'train_loss')
 				self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
 		else:
+			self.output = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'out_act')
 			self.loss = pixelCNNModel.loss_fn(network, labels, 'test_loss')
 
 
@@ -126,9 +128,43 @@ class Network:
 
 	def test(self,
 			inputs,
-			labels,
+			lables,
 			is_training=False):
-		pass
+		# input images for the model to train on
+		x = tf.placeholder(tf.float32, shape=(None, self.height, self.width,
+							self.channels), name='inputs')
+
+		# correct images for the model to check against when learning
+		y = tf.placeholder(tf.float32, shape=(None, self.height, self.width,
+							self.channels), name='correct_images')
+
+		# model is in the training phase
+		is_training = tf.placeholder(tf.bool, name='training')
+
+		# dropout rate to apply to dropout layers in model
+		dropout = tf.placeholder(tf.float32, name='drop_rate')
+
+		# add ops to save and restore all variables
+		saver = tf.train.Saver()
+
+		# build out the network architecture
+		self.build_network(x, y, is_training, dropout, 'test')
+
+		with tf.Session() as sess:
+			saver.restore(sess, '/tmp/model.ckpt')
+
+			outputs, loss = sess.run([self.output, self.loss],
+										feed_dict={x: inputs, y: labels,
+										is_training: is_training, dropout: 1.0})
+
+			fig=plt.figure(figsize=(8, 8))
+			columns = 4
+			rows = 5
+			for i in range(1, columns*rows +1):
+				img = outputs[i].reshape((28,28))
+    			fig.add_subplot(rows, columns, i)
+    			plt.imshow(img, cmap='gray')
+			plt.show()
 
 
 	def train(self,
@@ -157,6 +193,9 @@ class Network:
 		# dropout rate to apply to dropout layers in model
 		dropout = tf.placeholder(tf.float32, name='drop_rate')
 
+		# add ops to save and restore all variables
+		saver = tf.train.Saver()
+
 		# build out the network architecture
 		self.build_network(x, y, is_training, dropout, 'train')
 
@@ -181,3 +220,6 @@ class Network:
 
 				average_loss = epoch_loss / num_batches
 				print('Average Loss: ', average_loss, ' for epoch ', epoch_idx+1)
+
+			# save model to disk
+			save_path = saver.save(sess, '/tmp/model.ckpt')

@@ -94,6 +94,8 @@ def run(config):
 				width, channels, config)
 
 	network.train(train_images, train_images)
+	network.test(trimmed_test_images, test_images)
+
 
 if __name__ == '__main__':
 	config = sys.argv[1]
