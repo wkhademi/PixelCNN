@@ -188,6 +188,8 @@ class PixelCNN:
 			drop = tf.layers.dropout(inputs, rate=drop_rate, training=is_training,
 									 name='dropout')
 
+		return drop
+		
 
 	def loss_fn(self,
 				inputs,

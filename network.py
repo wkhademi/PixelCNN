@@ -94,19 +94,16 @@ class Network:
 											strides, mask_type, 'conv16')
 		network = pixelCNNModel.batch_norm(network, is_training, 'conv16_batch')
 
-		# flatten layer to be able to compute loss
-		network = pixelCNNModel.flatten(network, 'flatten')
-
 		self.network = network
 
 		if (train == 'train'):
 			update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 
 			with tf.control_dependencies(update_ops):
-				self.loss = pixelCNNModel.loss_fn(inputs, labels, 'train_loss')
+				self.loss = pixelCNNModel.loss_fn(network, labels, 'train_loss')
 				self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
 		else:
-			self.loss = pixelCNNModel.loss_fn(inputs, labels, 'test_loss')
+			self.loss = pixelCNNModel.loss_fn(network, labels, 'test_loss')
 
 
 	def generate_batch(self,
@@ -116,7 +113,7 @@ class Network:
 			Generate next batch of inputs to feed into network. If batch size is
 			greater than amount of inputs left, just take leftover inputs.
 		"""
-		num_inputs = inputs.get_shape().as_list()[0]
+		num_inputs = inputs.shape[0]
 
 		# make sure full batch of inputs can be taken from dataset
 		if (self.batch_size*(batch_index+1) < num_inputs):
@@ -137,7 +134,7 @@ class Network:
 	def train(self,
 			inputs,
 			labels,
-			is_training=True):
+			training=True):
 		"""
 			Train the Double PixelCNN model on a set of images.
 
@@ -167,20 +164,20 @@ class Network:
 		with tf.Session() as sess:
 			sess.run(tf.global_variables_initializer())
 
-			num_batches = inputs.get_shape().as_list()[0]/self.batch_size
+			num_batches = inputs.shape[0]/self.batch_size
 			average_loss = 0
 
-			for epoch_idx in range(num_epochs):
+			for epoch_idx in range(self.num_epochs):
 				epoch_loss = 0
 
 				for batch_idx in range(num_batches):
 					image_batch = self.generate_batch(batch_idx, inputs)
 
-					loss, _ = sess.run([self.loss, self.optimizer],
-									   feed_dict={x: inputs, y: labels,
-												  is_training: is_training, dropout: 0.2})
+					batch_loss, _ = sess.run([self.loss, self.optimizer],
+												feed_dict={x: image_batch, y: image_batch,
+												is_training: training, dropout: 0.2})
 
-					epoch_loss += loss
+					epoch_loss += batch_loss
 
 				average_loss = epoch_loss / num_batches
 				print('Average Loss: ', average_loss, ' for epoch ', epoch_idx+1)
