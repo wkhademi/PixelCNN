@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class PixelCNN:
@@ -41,7 +40,7 @@ class PixelCNN:
 			Returns:
 				pre_activation:
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			weights = tf.get_variable(name='weights', shape=kernel_shape, dtype=tf.float32,
 									initializer=tf.glorot_uniform_initializer())
 
@@ -108,7 +107,7 @@ class PixelCNN:
 			Returns:
 				activation: A layer in which a non-linear activation has been applied.
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			activation = fn(inputs, name='activation')
 
 		return activation
@@ -133,7 +132,7 @@ class PixelCNN:
 			Returns:
 				res_output: the input map added to the output map of the residual block
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			# downsample features from num_features -> 0.5*num_features
 			kernel_shape = [1, 1, features, features/2]
 			bias_shape = [features/2]
@@ -169,7 +168,7 @@ class PixelCNN:
 		"""
 			Performs batch normalization on the input layer.
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			batch_norm = tf.layers.batch_normalization(inputs, training=is_training,
 													   name='batch_norm')
 
@@ -184,12 +183,12 @@ class PixelCNN:
 		"""
 			Performs dropout on the input layer.
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			drop = tf.layers.dropout(inputs, rate=drop_rate, training=is_training,
 									 name='dropout')
 
 		return drop
-		
+
 
 	def loss_fn(self,
 				inputs,
@@ -198,7 +197,7 @@ class PixelCNN:
 		"""
 			Calculates the average loss of all the predicted pixels in an image
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			if (self.config == '--MNIST'):
 				loss_distribution = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels,
 																logits=inputs, name='loss')
@@ -218,7 +217,7 @@ class PixelCNN:
 		"""
 			Update weights and biases of network to minimize loss
 		"""
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			optimize = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
 		return optimize
@@ -227,7 +226,7 @@ class PixelCNN:
 	def flatten(self,
 				inputs,
 				scope):
-		with tf.variable_scope(scope):
+		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			shape = inputs.get_shape().as_list()
 			new_shape = [-1, shape[1]*shape[2]*shape[3]]
 			flat = tf.reshape(inputs, new_shape)

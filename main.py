@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('TkAgg')
+
 import sys
 import cv2
 import tensorflow as tf
