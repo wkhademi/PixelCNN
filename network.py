@@ -102,9 +102,10 @@ class Network:
 
 			with tf.control_dependencies(update_ops):
 				self.loss = pixelCNNModel.loss_fn(network, labels, 'train_loss')
+                self.output = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'train_out_act')
 				self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
 		else:
-			self.output = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'out_act')
+			self.output = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'test_out_act')
 			self.loss = pixelCNNModel.loss_fn(network, labels, 'test_loss')
 
 
@@ -163,7 +164,7 @@ class Network:
 				img = outputs[i].reshape((28,28))
 				fig.add_subplot(rows, columns, i)
 				plt.imshow(img, cmap='gray')
-			plt.show()
+			plt.savefig('test_output.pdf')
 
 
 	def train(self,
@@ -196,7 +197,7 @@ class Network:
 		self.build_network(x, y, is_training, dropout, 'train')
 
 		# add ops to network to save variables
-		save = tf.train.Saver()
+		saver = tf.train.Saver()
 
 		# start session and train PixelCNN
 		with tf.Session() as sess:
@@ -211,7 +212,7 @@ class Network:
 				for batch_idx in range(num_batches):
 					image_batch = self.generate_batch(batch_idx, inputs)
 
-					batch_loss, _ = sess.run([self.loss, self.optimizer],
+					outputs, batch_loss, _ = sess.run([self.output, self.loss, self.optimizer],
 												feed_dict={x: image_batch, y: image_batch,
 												is_training: training, dropout: 0.2})
 
@@ -219,6 +220,15 @@ class Network:
 
 				average_loss = epoch_loss / num_batches
 				print('Average Loss: ', average_loss, ' for epoch ', epoch_idx+1)
+
+            fig=plt.figure(figsize=(8, 8))
+			columns = 4
+			rows = 5
+			for i in range(1, columns*rows +1):
+				img = outputs[i].reshape((28,28))
+				fig.add_subplot(rows, columns, i)
+				plt.imshow(img, cmap='gray')
+			plt.savefig('train_output.pdf')
 
 			# save model to disk
 			save_path = saver.save(sess, '/tmp/model.ckpt')

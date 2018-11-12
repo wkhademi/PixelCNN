@@ -1,11 +1,10 @@
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 
 import sys
 import cv2
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.examples.tutorials.mnist import input_data
 from network import Network
