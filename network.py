@@ -1,20 +1,18 @@
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 from PixelCNN import PixelCNN
+from utils import trim_images, save_samples
 
 class Network:
 	def __init__(self,
 			train_inputs,
 			test_inputs,
-			trimmed_test_inputs,
 			height,
 			width,
 			channels,
 			config):
 		self.train_inputs = train_inputs
 		self.test_inputs = test_inputs
-		self.trimmed_test_inputs = trimmed_test_inputs
 		self.height = height
 		self.width = width
 		self.channels = channels
@@ -26,7 +24,7 @@ class Network:
 		self.network = None  # network graph will be built during training or testing phase
 		self.loss = None # will be added to graph during training or testing phase
 		self.optimizer = None # will be added to graph during training phase
-		self.output = None
+		self.pred = None
 
 
 	def build_network(self,
@@ -102,11 +100,14 @@ class Network:
 
 			with tf.control_dependencies(update_ops):
 				self.loss = pixelCNNModel.loss_fn(network, labels, 'train_loss')
-                self.output = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'train_out_act')
 				self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
 		else:
-			self.output = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'test_out_act')
 			self.loss = pixelCNNModel.loss_fn(network, labels, 'test_loss')
+
+			if (self.config == '--MNIST'):
+				self.pred = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'test_out_act')
+			elif (self.config == 'CIFAR'):
+				pass # Do something else...
 
 
 	def generate_batch(self,
@@ -128,8 +129,6 @@ class Network:
 
 
 	def test(self,
-			inputs,
-			labels,
 			training=False):
 		# input images for the model to train on
 		x = tf.placeholder(tf.float32, shape=(None, self.height, self.width,
@@ -153,23 +152,22 @@ class Network:
 		with tf.Session() as sess:
 			saver.restore(sess, '/tmp/model.ckpt')
 
-			outputs, loss = sess.run([self.output, self.loss],
-										feed_dict={x: inputs, y: labels,
-										is_training: training, dropout: 1.0})
+			# remove bottom half from images
+			images = trim_images(self.test_inputs)
 
-			fig=plt.figure(figsize=(8, 8))
-			columns = 4
-			rows = 5
-			for i in range(1, columns*rows +1):
-				img = outputs[i].reshape((28,28))
-				fig.add_subplot(rows, columns, i)
-				plt.imshow(img, cmap='gray')
-			plt.savefig('test_output.pdf')
+			# use model to generate bottom half of images
+			for i in range(self.height//2, self.height):
+				for j in range(self.width):
+					for k in range(self.channels):
+						probs = sess.run(self.pred, feed_dict={x: images, y: self.test_inputs,
+														is_training: training, dropout: 1.0})
+						sample = (np.random.uniform(size=probs.shape) < probs).astype(np.float32)
+						images[:, i, j, k] = sample[:, i, j, k]
+
+			save_samples(images, self.height, self.width)
 
 
 	def train(self,
-			inputs,
-			labels,
 			training=True):
 		"""
 			Train the Double PixelCNN model on a set of images.
@@ -203,16 +201,19 @@ class Network:
 		with tf.Session() as sess:
 			sess.run(tf.global_variables_initializer())
 
-			num_batches = inputs.shape[0]/self.batch_size
+			num_batches = self.train_inputs.shape[0]/self.batch_size
 			average_loss = 0
 
 			for epoch_idx in range(self.num_epochs):
 				epoch_loss = 0
 
+				# shuffle inputs every epoch
+				inputs = np.random.shuffle(self.train_inputs)
+
 				for batch_idx in range(num_batches):
 					image_batch = self.generate_batch(batch_idx, inputs)
 
-					outputs, batch_loss, _ = sess.run([self.output, self.loss, self.optimizer],
+					batch_loss, _ = sess.run([self.loss, self.optimizer],
 												feed_dict={x: image_batch, y: image_batch,
 												is_training: training, dropout: 0.2})
 
@@ -220,15 +221,6 @@ class Network:
 
 				average_loss = epoch_loss / num_batches
 				print('Average Loss: ', average_loss, ' for epoch ', epoch_idx+1)
-
-            fig=plt.figure(figsize=(8, 8))
-			columns = 4
-			rows = 5
-			for i in range(1, columns*rows +1):
-				img = outputs[i].reshape((28,28))
-				fig.add_subplot(rows, columns, i)
-				plt.imshow(img, cmap='gray')
-			plt.savefig('train_output.pdf')
 
 			# save model to disk
 			save_path = saver.save(sess, '/tmp/model.ckpt')
