@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from PixelCNN import PixelCNN
-from utils import trim_images, save_samples
+from utils import trim_images, save_samples, binarize
 
 class Network:
 	def __init__(self,
@@ -17,10 +17,10 @@ class Network:
 		self.width = width
 		self.channels = channels
 		self.config = config
-		self.num_residuals = 4
-		self.learning_rate = 1e-5
-		self.num_epochs = 10
-		self.batch_size = 32
+		self.num_residuals = 3
+		self.learning_rate = 1e-4
+		self.num_epochs = 25
+		self.batch_size = 16
 		self.network = None  # network graph will be built during training or testing phase
 		self.loss = None # will be added to graph during training or testing phase
 		self.optimizer = None # will be added to graph during training phase
@@ -31,7 +31,6 @@ class Network:
 					inputs,
 					labels,
 					is_training,
-					dropout,
 					train):
 		"""
 			Build the 16 layer PixelCNN network.
@@ -44,54 +43,54 @@ class Network:
 			kernel_shape = [7, 7, self.channels, 32]
 			bias_shape = [32]
 		elif (self.config == '--CIFAR'):
-			kernel_shape = [7, 7, self.channels, 96]
-			bias_shape = [96]
+			kernel_shape = [7, 7, self.channels, 256]
+			bias_shape = [256]
 
 		strides = [1, 1, 1, 1]
 		mask_type = 'A'
-		network = pixelCNNModel.conv2d_layer(inputs, kernel_shape, bias_shape,
-											strides, mask_type, 'conv1')
-		network = pixelCNNModel.batch_norm(network, is_training, 'conv1_batch')
-		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'conv1_act')
+		network = pixelCNNModel.conv2d_layer(inputs, kernel_shape, bias_shape, strides, mask_type, 'conv1')
+		network = pixelCNNModel.batch_norm(network, is_training, 'conv1_norm')
 
 		# 4 Residual Blocks in the network
 		for idx in xrange(self.num_residuals):
 			scope = 'res' + str(idx)
-
 			if (self.config == '--MNIST'):
 				network = pixelCNNModel.residual_block(network, 32, is_training, scope)
 			elif (self.config == '--CIFAR'):
-				network = pixelCNNModel.residual_block(network, 96, is_training, scope)
+				network = pixelCNNModel.residual_block(network, 256, is_training, scope)
 
-		# Final 2 Hidden Layers in the network
 		if (self.config == '--MNIST'):
 			kernel_shape = [1, 1, 32, 32]
 			bias_shape = [32]
 		elif (self.config == '--CIFAR'):
-			kernel_shape = [1, 1, 96, 96]
-			bias_shape = [96]
+			kernel_shape = [1, 1, 256, 1024]
+			bias_shape = [1024]
+
+		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv11')
+		network = pixelCNNModel.batch_norm(network, is_training, 'conv11_norm')
+
+		if (self.config == '--CIFAR'):
+			kernel_shape = [1, 1, 1024, 1024]
 
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
-		for idx in xrange(2):
-			scope = 'conv' + str(idx+14)
-			network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape,
-												strides, mask_type, scope)
-			network = pixelCNNModel.batch_norm(network, is_training, scope+'_batch')
-			network = pixelCNNModel.activation_fn(network, tf.nn.relu, scope+'_act')
+		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act12')
+		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv12')
+		network = pixelCNNModel.batch_norm(network, is_training, 'conv12_norm')
 
 		# Final Layer in the network
 		if (self.config == '--MNIST'):
 			kernel_shape = [1, 1, 32, self.channels]
+			bias_shape = [self.channels]
 		elif (self.config == '--CIFAR'):
-			kernel_shape = [1, 1, 96, self.channels]
+			kernel_shape = [1, 1, 1024, 256*self.channels]
+			bias_shape = [256*self.channels]
 
-		bias_shape = [self.channels]
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
-		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape,
-											strides, mask_type, 'conv16')
-		network = pixelCNNModel.batch_norm(network, is_training, 'conv16_batch')
+		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act13')
+		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv13')
+		network = pixelCNNModel.batch_norm(network, is_training, 'conv13_norm')
 
 		self.network = network
 
@@ -141,11 +140,8 @@ class Network:
 		# model is in the training phase
 		is_training = tf.placeholder(tf.bool, name='training')
 
-		# dropout rate to apply to dropout layers in model
-		dropout = tf.placeholder(tf.float32, name='drop_rate')
-
 		# build out the network architecture
-		self.build_network(x, y, is_training, dropout, 'test')
+		self.build_network(x, y, is_training, 'test')
 
 		saver = tf.train.Saver()
 
@@ -159,9 +155,8 @@ class Network:
 			for i in range(self.height//2, self.height):
 				for j in range(self.width):
 					for k in range(self.channels):
-						probs = sess.run(self.pred, feed_dict={x: images, y: self.test_inputs,
-														is_training: training, dropout: 1.0})
-						sample = (np.random.uniform(size=probs.shape) < probs).astype(np.float32)
+						probs = sess.run(self.pred, feed_dict={x: images, y: self.test_inputs, is_training: training})
+						sample = binarize(probs)
 						images[:, i, j, k] = sample[:, i, j, k]
 
 			save_samples(images, self.height, self.width)
@@ -188,11 +183,8 @@ class Network:
 		# model is in the training phase
 		is_training = tf.placeholder(tf.bool, name='training')
 
-		# dropout rate to apply to dropout layers in model
-		dropout = tf.placeholder(tf.float32, name='drop_rate')
-
 		# build out the network architecture
-		self.build_network(x, y, is_training, dropout, 'train')
+		self.build_network(x, y, is_training, 'train')
 
 		# add ops to network to save variables
 		saver = tf.train.Saver()
@@ -208,14 +200,13 @@ class Network:
 				epoch_loss = 0
 
 				# shuffle inputs every epoch
-				inputs = np.random.shuffle(self.train_inputs)
+				np.random.shuffle(self.train_inputs)
 
 				for batch_idx in range(num_batches):
-					image_batch = self.generate_batch(batch_idx, inputs)
+					image_batch = self.generate_batch(batch_idx, self.train_inputs)
 
 					batch_loss, _ = sess.run([self.loss, self.optimizer],
-												feed_dict={x: image_batch, y: image_batch,
-												is_training: training, dropout: 0.2})
+											feed_dict={x: image_batch, y: image_batch, is_training: training})
 
 					epoch_loss += batch_loss
 
