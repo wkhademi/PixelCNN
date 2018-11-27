@@ -151,6 +151,9 @@ class Network:
 			# remove bottom half from images
 			images = trim_images(self.test_inputs)
 
+			images = images[:22]
+			self.test_inputs = self.test_inputs[:22]
+
 			# use model to generate bottom half of images
 			for i in range(self.height//2, self.height):
 				for j in range(self.width):
