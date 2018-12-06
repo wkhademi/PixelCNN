@@ -17,31 +17,24 @@ class Network:
 		self.width = width
 		self.channels = channels
 		self.config = config
-		self.num_residuals = 3
-		self.learning_rate = 1e-4
-		self.num_epochs = 25
-		self.batch_size = 16
-		self.network = None  # network graph will be built during training or testing phase
-		self.loss = None # will be added to graph during training or testing phase
-		self.optimizer = None # will be added to graph during training phase
+		self.num_residuals = 5 
+		self.learning_rate = 1e-3
+		self.num_epochs = 25 
+		self.batch_size = 100
+		self.network = None 
+		self.loss = None
+		self.optimizer = None
 		self.pred = None
+                self.NLL = None
 
 
-	def build_network(self,
-					inputs,
-					labels,
-					is_training,
-					train):
-		"""
-			Build the 16 layer PixelCNN network.
-		"""
-		pixelCNNModel = PixelCNN(inputs, self.height, self.width, self.channels,
-								self.config)
+	def build_network(self, inputs, labels, is_training, train):
+		pixelCNNModel = PixelCNN(inputs, self.height, self.width, self.channels, self.config)
 
 		# First layer in the network
 		if (self.config == '--MNIST'):
-			kernel_shape = [7, 7, self.channels, 32]
-			bias_shape = [32]
+			kernel_shape = [7, 7, self.channels, 64]
+			bias_shape = [64]
 		elif (self.config == '--CIFAR'):
 			kernel_shape = [7, 7, self.channels, 256]
 			bias_shape = [256]
@@ -50,37 +43,46 @@ class Network:
 		mask_type = 'A'
 		network = pixelCNNModel.conv2d_layer(inputs, kernel_shape, bias_shape, strides, mask_type, 'conv1')
 		network = pixelCNNModel.batch_norm(network, is_training, 'conv1_norm')
+                networ = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act1')
 
+                kernel_shape = [7, 7, 64, 64]
+                mask_type = 'B'
 		# 4 Residual Blocks in the network
 		for idx in xrange(self.num_residuals):
 			scope = 'res' + str(idx)
-			if (self.config == '--MNIST'):
-				network = pixelCNNModel.residual_block(network, 32, is_training, scope)
-			elif (self.config == '--CIFAR'):
-				network = pixelCNNModel.residual_block(network, 256, is_training, scope)
+                        network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, scope+'conv')  
+                        network = pixelCNNModel.batch_norm(network, is_training, scope+'conv_norm')
+                        network = pixelCNNModel.activation_fn(network, tf.nn.relu, scope+'act')
+			#if (self.config == '--MNIST'):
+		        #	network = pixelCNNModel.residual_block(network, 128, is_training, scope)
+			#elif (self.config == '--CIFAR'):
+			#	network = pixelCNNModel.residual_block(network, 256, is_training, scope)
 
 		if (self.config == '--MNIST'):
-			kernel_shape = [1, 1, 32, 32]
-			bias_shape = [32]
+			kernel_shape = [7, 7, 64, 64]
+			bias_shape = [64]
 		elif (self.config == '--CIFAR'):
 			kernel_shape = [1, 1, 256, 1024]
 			bias_shape = [1024]
 
+                #network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act11')
 		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv11')
 		network = pixelCNNModel.batch_norm(network, is_training, 'conv11_norm')
+                network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act11')
 
 		if (self.config == '--CIFAR'):
 			kernel_shape = [1, 1, 1024, 1024]
 
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
-		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act12')
+                #network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act12')
 		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv12')
 		network = pixelCNNModel.batch_norm(network, is_training, 'conv12_norm')
+                network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act12')
 
 		# Final Layer in the network
 		if (self.config == '--MNIST'):
-			kernel_shape = [1, 1, 32, self.channels]
+			kernel_shape = [1, 1, 64, self.channels]
 			bias_shape = [self.channels]
 		elif (self.config == '--CIFAR'):
 			kernel_shape = [1, 1, 1024, 256*self.channels]
@@ -88,7 +90,6 @@ class Network:
 
 		strides = [1, 1, 1, 1]
 		mask_type = 'B'
-		network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act13')
 		network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv13')
 		network = pixelCNNModel.batch_norm(network, is_training, 'conv13_norm')
 
@@ -101,7 +102,8 @@ class Network:
 				self.loss = pixelCNNModel.loss_fn(network, labels, 'train_loss')
 				self.optimizer = pixelCNNModel.optimizer(self.loss, self.learning_rate, 'optimizer')
 		else:
-			self.loss = pixelCNNModel.loss_fn(network, labels, 'test_loss')
+                        self.loss = pixelCNNModel.loss_fn(network, labels, 'test_loss')
+                        self.NLL = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=network))
 
 			if (self.config == '--MNIST'):
 				self.pred = pixelCNNModel.activation_fn(network, tf.math.sigmoid, 'test_out_act')
@@ -109,9 +111,7 @@ class Network:
 				pass # Do something else...
 
 
-	def generate_batch(self,
-						batch_index,
-						inputs):
+	def generate_batch(self, batch_index, inputs):
 		"""
 			Generate next batch of inputs to feed into network. If batch size is
 			greater than amount of inputs left, just take leftover inputs.
@@ -127,8 +127,7 @@ class Network:
 		return image_batch
 
 
-	def test(self,
-			training=False):
+	def test(self, training=False):
 		# input images for the model to train on
 		x = tf.placeholder(tf.float32, shape=(None, self.height, self.width,
 							self.channels), name='inputs')
@@ -148,11 +147,26 @@ class Network:
 		with tf.Session() as sess:
 			saver.restore(sess, '/tmp/model.ckpt')
 
-			# remove bottom half from images
-			images = trim_images(self.test_inputs)
+                        loss = []
+                        NLL = []
+                        for i in range(self.test_inputs.shape[0]):
+                            binaryImage = binarize(self.test_inputs[i])
+                            binaryImage = np.reshape(binaryImage, (1, 28, 28, 1))
+                            loss.append(sess.run(self.loss, feed_dict={x:binaryImage, y:binaryImage, is_training: training}))
+                            NLL.append(sess.run(self.NLL, feed_dict={x:binaryImage, y:binaryImage, is_training: training}))
+
+                        loss = np.mean(loss)
+                        NLL = np.mean(NLL)
+                        print("Test loss: ", loss, "NLL: ", NLL)
+
+                        #save_samples(self.test_inputs[22:44], self.height, self.width)
+
+                        # remove bottom half from images
+                        images = trim_images(self.test_inputs)
 
 			images = images[:22]
 			self.test_inputs = self.test_inputs[:22]
+                        #save_samples(images, self.height, self.width)
 
 			# use model to generate bottom half of images
 			for i in range(self.height//2, self.height):
@@ -165,8 +179,7 @@ class Network:
 			save_samples(images, self.height, self.width)
 
 
-	def train(self,
-			training=True):
+	def train(self, training=True):
 		"""
 			Train the Double PixelCNN model on a set of images.
 
@@ -207,6 +220,7 @@ class Network:
 
 				for batch_idx in range(num_batches):
 					image_batch = self.generate_batch(batch_idx, self.train_inputs)
+                                        image_batch = binarize(image_batch)
 
 					batch_loss, _ = sess.run([self.loss, self.optimizer],
 											feed_dict={x: image_batch, y: image_batch, is_training: training})

@@ -1,13 +1,15 @@
 import matplotlib
 matplotlib.use('Agg')
 
+import os
 import sys
 import tensorflow as tf
 import numpy as np
+from scipy.io import loadmat
+from urllib2 import urlopen
 from sklearn.model_selection import train_test_split
 from tensorflow.examples.tutorials.mnist import input_data
 from network import Network
-from utils import binarize
 
 
 def unpickle(file):
@@ -38,6 +40,7 @@ def retrieve_data(config):
 
 		If '--CIFAR' flag is used, load the CIFAR10 Dataset.
 		If '--MNIST' flag is used, load the MNIST Dataset.
+                If '--FREY' flag is used, load the FREY Dataset
 
 		CIFAR10 Dataset downloaded from:
 		https://www.cs.toronto.edu/~kriz/cifar.html
@@ -64,9 +67,18 @@ def retrieve_data(config):
 		# reshape to correct image structure
 		train_images = np.reshape(image_set.train.images, (-1, 28, 28, 1))
 		test_images = np.reshape(image_set.test.images, (-1, 28, 28, 1))
+        elif (config == '--FREY'):
+                url = 'https://cs.nyu.edu/~roweis/data/frey_rawface.mat'
+                data_filename = os.path.basename(url)
 
-		train_images = binarize(train_images)
-		test_images = binarize(test_images)
+                if not os.path.exists(data_filename):
+                    file = urlopen(url)
+
+                    with open(os.path.basename(url), 'wb') as local_file:
+                        local_file.write(f.read())
+
+                images = loadmat(data_filename, squeeze_me=True, struct_as_record=False)
+                images = images["ff"].T.reshape((-1, 28, 20))
 
 	return train_images, test_images
 
@@ -78,11 +90,13 @@ def run(config):
 		height, width, channels = (32, 32, 3)
 	elif (config == '--MNIST'):
 		height, width, channels = (28, 28, 1)
+        elif (config == '--FREY'):
+                height, width, channels = (28, 20, 1)
 
-	network = Network(train_images, test_images, height, width, channels, config)
+	#network = Network(train_images, test_images, height, width, channels, config)
 
-	network.train()
-	network.test()
+	#network.train()
+	#network.test()
 
 
 if __name__ == '__main__':

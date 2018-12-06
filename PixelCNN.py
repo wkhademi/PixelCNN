@@ -65,8 +65,8 @@ class PixelCNN:
 					mask[h_center, w_center, 2:, red_filter_end:green_filter_end] = 0.0
 
 				# remove center pixel information availability
-				if (mask_type == 'a'):
-					if (self.config == '--MNIST'):
+				if (mask_type == 'A'):
+					if (self.config == '--MNIST' or self.config == '--FREY'):
 						mask[h_center, w_center, :, :] = 0.0
 					elif (self.config == '--CIFAR'): # tie channel inputs to each other
 						mask[h_center, w_center, :, :red_filter_end] = 0.0
@@ -200,7 +200,7 @@ class PixelCNN:
 		with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
 			if (self.config == '--MNIST'):
 				cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=inputs, name='loss')
-			elif (self.config == '--CIFAR'):
+			elif (self.config == '--CIFAR' or self.config == '--FREY'):
 				cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=inputs, name='loss')
 
 			loss = tf.reduce_mean(cross_entropy)
