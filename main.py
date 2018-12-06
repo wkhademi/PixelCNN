@@ -40,7 +40,7 @@ def retrieve_data(config):
 
 		If '--CIFAR' flag is used, load the CIFAR10 Dataset.
 		If '--MNIST' flag is used, load the MNIST Dataset.
-                If '--FREY' flag is used, load the FREY Dataset
+		If '--FREY' flag is used, load the FREY Dataset
 
 		CIFAR10 Dataset downloaded from:
 		https://www.cs.toronto.edu/~kriz/cifar.html
@@ -67,18 +67,25 @@ def retrieve_data(config):
 		# reshape to correct image structure
 		train_images = np.reshape(image_set.train.images, (-1, 28, 28, 1))
 		test_images = np.reshape(image_set.test.images, (-1, 28, 28, 1))
-        elif (config == '--FREY'):
-                url = 'https://cs.nyu.edu/~roweis/data/frey_rawface.mat'
-                data_filename = os.path.basename(url)
+	elif (config == '--FREY'):
+		url = 'https://cs.nyu.edu/~roweis/data/frey_rawface.mat'
+		data_filename = os.path.basename(url)
 
-                if not os.path.exists(data_filename):
-                    file = urlopen(url)
+		if not os.path.exists(data_filename):
+			file = urlopen(url)
 
-                    with open(os.path.basename(url), 'wb') as local_file:
-                        local_file.write(f.read())
+			with open(os.path.basename(url), 'wb') as local_file:
+				local_file.write(file.read())
 
-                images = loadmat(data_filename, squeeze_me=True, struct_as_record=False)
-                images = images["ff"].T.reshape((-1, 28, 20))
+		images = loadmat(data_filename, squeeze_me=True, struct_as_record=False)
+		images = images["ff"].T.reshape((-1, 28, 20, 1))
+
+		# split dataset into train and test sets
+		train_images, test_images = split_data(images)
+
+		# normalize images to have every pixel be between [-1, 1]
+		train_images = 2 * (train_images.astype('float32') / 255.0) - 1
+		test_images = 2 * (test_images.astype('float32') / 255.0) - 1
 
 	return train_images, test_images
 
@@ -90,13 +97,13 @@ def run(config):
 		height, width, channels = (32, 32, 3)
 	elif (config == '--MNIST'):
 		height, width, channels = (28, 28, 1)
-        elif (config == '--FREY'):
-                height, width, channels = (28, 20, 1)
+	elif (config == '--FREY'):
+		height, width, channels = (28, 20, 1)
 
-	#network = Network(train_images, test_images, height, width, channels, config)
+	network = Network(train_images, test_images, height, width, channels, config)
 
-	#network.train()
-	#network.test()
+	network.train()
+	network.test()
 
 
 if __name__ == '__main__':

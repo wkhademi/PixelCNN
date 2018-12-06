@@ -5,8 +5,13 @@ def binarize(images):
 	return (np.random.uniform(size=images.shape) < images).astype(np.float32)
 
 
-# create set of images with bottom half of image missing
-def trim_images(images):
+def sample_categorical(images):
+	sample = [np.argmax(np.random.multinomial(1,p/(np.sum(p)+1e-5))) for p in x]
+	return np.stack(sample)
+
+
+# create set of images with bottom half missing
+def trim_images(images, config):
 	trimmed_test_images = images
 	starting_trim = trimmed_test_images.shape[1]/2
 	trimmed_test_images[:, starting_trim:, :, :] = 0

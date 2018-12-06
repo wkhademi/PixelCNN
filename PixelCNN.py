@@ -44,7 +44,7 @@ class PixelCNN:
 			weights = tf.get_variable(name='weights', shape=kernel_shape, dtype=tf.float32,
 									initializer=tf.glorot_uniform_initializer())
 
-			if mask_type != None:  # use convolution mask
+			if (mask_type != None):  # use convolution mask
 				mask = np.ones(kernel_shape).astype('f')
 
 				# find center of weight mask matrix
@@ -201,7 +201,8 @@ class PixelCNN:
 			if (self.config == '--MNIST'):
 				cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=inputs, name='loss')
 			elif (self.config == '--CIFAR' or self.config == '--FREY'):
-				cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=inputs, name='loss')
+                labels = tf.cast(labels, tf.int32)
+				cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=inputs, name='loss')
 
 			loss = tf.reduce_mean(cross_entropy)
 
