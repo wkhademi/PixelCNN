@@ -201,8 +201,8 @@ class PixelCNN:
 			if (self.config == '--MNIST'):
 				cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=inputs, name='loss')
 			elif (self.config == '--CIFAR' or self.config == '--FREY'):
-                labels = tf.cast(labels, tf.int32)
-				cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=inputs, name='loss')
+                                labels = tf.cast(labels, tf.int32)
+				cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=inputs, name='loss')
 
 			loss = tf.reduce_mean(cross_entropy)
 

@@ -83,10 +83,6 @@ def retrieve_data(config):
 		# split dataset into train and test sets
 		train_images, test_images = split_data(images)
 
-		# normalize images to have every pixel be between [-1, 1]
-		train_images = 2 * (train_images.astype('float32') / 255.0) - 1
-		test_images = 2 * (test_images.astype('float32') / 255.0) - 1
-
 	return train_images, test_images
 
 
@@ -102,7 +98,7 @@ def run(config):
 
 	network = Network(train_images, test_images, height, width, channels, config)
 
-	network.train()
+	#network.train()
 	network.test()
 
 
