@@ -5,8 +5,8 @@ def binarize(images):
     return (np.random.uniform(size=images.shape) < images).astype(np.float32)
 
 
-def sample_categorical(images):
-    sample = [np.argmax(np.random.multinomial(1,p/(np.sum(p)+1e-5))) for p in images]
+def sample_categorical(x):
+    sample = [np.argmax(np.random.multinomial(1,p/(np.sum(p)+1e-5))) for p in x]
     return np.stack(sample)
 
 

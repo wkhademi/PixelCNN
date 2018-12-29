@@ -95,7 +95,7 @@ def run(config):
 
     network = Network(train_images, test_images, height, width, channels, config)
 
-    #network.train()
+    network.train()
     network.test()
 
 

@@ -19,7 +19,7 @@ class Network:
         self.config = config
         self.num_residuals = 7
         self.learning_rate = 1e-3
-        self.num_epochs = 50
+        self.num_epochs = 50 
         self.batch_size = 64
         self.network = None
         self.loss = None
@@ -93,7 +93,7 @@ class Network:
                 self.pred = pixelCNNModel.activation_fn(network, tf.nn.sigmoid, 'test_out_act')
             elif (self.config == 'CIFAR' or self.config == '--FREY'):
                 self.NLL = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.cast(labels, tf.int32), logits=network))
-                self.pred = tf.cast(tf.argmax(pixelCNNModel.activation_fn(network, tf.nn.softmax, 'test_out_act'), axis=-1), tf.int8)
+                self.pred = pixelCNNModel.activation_fn(network, tf.nn.softmax, 'test_out_act')
 
 
     def generate_batch(self, batch_index, inputs):
@@ -174,12 +174,13 @@ class Network:
 
                         if (self.config == '--MNIST'):
                             sample = binarize(probs)
+                            images[:, i, j, k] = sample[:, i, j, k]
                         elif (self.config == '--FREY'):
                             sample = sample_categorical(probs[:, i, j])
+                            images[:, i, j, k] = 2 * (sample.astype('float32') / 255.) - 1.
 
-                        images[:, i, j, k] = sample[:, i, j]
 
-        save_samples(images, self.height, self.width)
+            save_samples(images, self.height, self.width)
 
 
     def train(self, training=True):
@@ -238,5 +239,5 @@ class Network:
                 average_loss = epoch_loss / num_batches
                 print('Average Loss: ', average_loss, ' for epoch ', epoch_idx+1)
 
-        # save model to disk
-        save_path = saver.save(sess, '/tmp/model.ckpt')
+            # save model to disk
+            save_path = saver.save(sess, '/tmp/model.ckpt')
