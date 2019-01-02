@@ -17,9 +17,9 @@ class Network:
         self.width = width
         self.channels = channels
         self.config = config
-        self.num_residuals = 7
+        self.num_residuals = 3
         self.learning_rate = 1e-3
-        self.num_epochs = 50 
+        self.num_epochs = 50
         self.batch_size = 64
         self.network = None
         self.loss = None
@@ -48,6 +48,13 @@ class Network:
         network = pixelCNNModel.batch_norm(network, is_training, 'conv1_norm')
         network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act1')
 
+        for idx in xrange(self.num_residuals):
+            scope = 'res' + str(idx)
+            if (self.config == '--MNIST'):
+                network = pixelCNNModel.residual_block(network, 64, is_training, scope)
+            elif (self.config == '--FREY'):
+                network = pixelCNNModel.residual_block(network, 128, is_training, scope)
+
         if (self.config == '--MNIST'):
             kernel_shape = [7, 7, 64, 64]
         elif (self.config == '--CIFAR'):
@@ -56,9 +63,9 @@ class Network:
             kernel_shape = [7, 7, 128, 128]
             mask_type = 'B'
 
-        # 7 Mask Type 'B' Convolutions
-        for idx in xrange(self.num_residuals):
-            scope = 'res' + str(idx)
+        # 2 Mask Type 'B' Convolutions
+        for idx in xrange(2):
+            scope = 'final' + str(idx)
             network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, scope+'conv')
             network = pixelCNNModel.batch_norm(network, is_training, scope+'conv_norm')
             network = pixelCNNModel.activation_fn(network, tf.nn.relu, scope+'act')

@@ -135,26 +135,26 @@ class PixelCNN:
             kernel_shape = [1, 1, features, features/2]
             bias_shape = [features/2]
             strides = [1, 1, 1, 1]
-            act1 = self.activation_fn(inputs, tf.nn.relu, 'res_act1')
-            conv1 = self.conv2d_layer(act1, kernel_shape, bias_shape, strides, mask_type, 'res_conv1')
+            conv1 = self.conv2d_layer(inputs, kernel_shape, bias_shape, strides, mask_type, 'res_conv1')
             conv1_norm = self.batch_norm(conv1, is_training, 'res_batch1')
+            act1 = self.activation_fn(conv1_norm, tf.nn.relu, 'res_act1')
 
             # convolution layer
-            kernel_shape = [3, 3, features/2, features/2]
+            kernel_shape = [7, 7, features/2, features/2]
             bias_shape = [features/2]
-            act2 = self.activation_fn(conv1_norm, tf.nn.relu, 'res_act2')
-            conv2 = self.conv2d_layer(act2, kernel_shape, bias_shape, strides, mask_type, 'res_conv2')
+            conv2 = self.conv2d_layer(act1, kernel_shape, bias_shape, strides, mask_type, 'res_conv2')
             conv2_norm = self.batch_norm(conv2, is_training, 'res_batch2')
+            act2 = self.activation_fn(conv2_norm, tf.nn.relu, 'res_act2')
 
             # upsample features from num_features -> 2*num_features
             kernel_shape = [1, 1, features/2, features]
             bias_shape = [features]
-            act3 = self.activation_fn(conv2_norm, tf.nn.relu, 'res_act3')
-            conv3 = self.conv2d_layer(act3, kernel_shape, bias_shape, strides, mask_type, 'res_conv3')
-            conv3_batch = self.batch_norm(conv3, is_training, 'res_batch3')
+            conv3 = self.conv2d_layer(act2, kernel_shape, bias_shape, strides, mask_type, 'res_conv3')
+            conv3_norm = self.batch_norm(conv3, is_training, 'res_batch3')
+            act3 = self.activation_fn(conv3_norm, tf.nn.relu, 'res_act3')
 
             # add input map to output map
-            res_output = inputs + conv3_batch
+            res_output = inputs + act3
 
         return res_output
 
