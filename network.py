@@ -17,10 +17,10 @@ class Network:
         self.width = width
         self.channels = channels
         self.config = config
-        self.num_residuals = 3
+        self.num_residuals = 5 
         self.learning_rate = 1e-3
-        self.num_epochs = 50
-        self.batch_size = 64
+        self.num_epochs = 25 
+        self.batch_size = 100 
         self.network = None
         self.loss = None
         self.optimizer = None
@@ -39,8 +39,8 @@ class Network:
             kernel_shape = [7, 7, self.channels, 256]
             bias_shape = [256]
         elif (self.config == '--FREY'):
-            kernel_shape = [7, 7, self.channels, 128]
-            bias_shape = [128]
+            kernel_shape = [7, 7, self.channels, 256]
+            bias_shape = [256]
 
         strides = [1, 1, 1, 1]
         mask_type = 'A'
@@ -48,20 +48,21 @@ class Network:
         network = pixelCNNModel.batch_norm(network, is_training, 'conv1_norm')
         network = pixelCNNModel.activation_fn(network, tf.nn.relu, 'act1')
 
+        mask_type = 'B'
+
         for idx in xrange(self.num_residuals):
             scope = 'res' + str(idx)
             if (self.config == '--MNIST'):
                 network = pixelCNNModel.residual_block(network, 64, is_training, scope)
             elif (self.config == '--FREY'):
-                network = pixelCNNModel.residual_block(network, 128, is_training, scope)
+                network = pixelCNNModel.residual_block(network, 256, is_training, scope)
 
         if (self.config == '--MNIST'):
             kernel_shape = [7, 7, 64, 64]
         elif (self.config == '--CIFAR'):
             kernel_shape = [7, 7, 256, 256]
         elif (self.config == '--FREY'):
-            kernel_shape = [7, 7, 128, 128]
-            mask_type = 'B'
+            kernel_shape = [7, 7, 256, 256]
 
         # 2 Mask Type 'B' Convolutions
         for idx in xrange(2):
@@ -78,7 +79,7 @@ class Network:
             kernel_shape = [1, 1, 256, 256*self.channels]
             bias_shape = [256*self.channels]
         elif (self.config == '--FREY'):
-            kernel_shape = [1, 1, 128, 256*self.channels]
+            kernel_shape = [1, 1, 256, 256*self.channels]
             bias_shape = [256*self.channels]
 
         network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv13')

@@ -146,7 +146,7 @@ class PixelCNN:
             conv2_norm = self.batch_norm(conv2, is_training, 'res_batch2')
             act2 = self.activation_fn(conv2_norm, tf.nn.relu, 'res_act2')
 
-            # upsample features from num_features -> 2*num_features
+            # upsample features from 0.5*num_features -> num_features
             kernel_shape = [1, 1, features/2, features]
             bias_shape = [features]
             conv3 = self.conv2d_layer(act2, kernel_shape, bias_shape, strides, mask_type, 'res_conv3')
