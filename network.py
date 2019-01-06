@@ -19,10 +19,10 @@ class Network:
         self.width = width
         self.channels = channels
         self.config = config
-        self.num_residuals = num_residuals 
+        self.num_residuals = num_residuals
         self.learning_rate = 1e-3
-        self.num_epochs = num_epochs 
-        self.batch_size = 100 
+        self.num_epochs = num_epochs
+        self.batch_size = 100
         self.network = None
         self.loss = None
         self.optimizer = None
@@ -222,8 +222,8 @@ class Network:
 
         # start session and train PixelCNN
         with tf.Session() as sess:
-            #sess.run(tf.global_variables_initializer())
-            saver.restore(sess, '/tmp/model.ckpt')
+            sess.run(tf.global_variables_initializer())
+            #saver.restore(sess, '/tmp/model.ckpt')
 
             num_batches = self.train_inputs.shape[0]/self.batch_size
             average_loss = 0

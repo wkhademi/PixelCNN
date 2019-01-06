@@ -11,14 +11,20 @@ The model was trained for 25 epochs on a binarized version of the MNIST dataset.
 The model was able to reach a negative log-likelihood score of 80.97 nats.
 
 **Incomplete Images:**
+![alt text](https://github.com/wkhademi/PixelCNN/images/MNIST_Incomplete.png "MNIST Incomplete")
 
 **Completed Images:**
+![alt text](https://github.com/wkhademi/PixelCNN/images/MNIST_Completed.png "MNIST Completed")
 
 ### Frey Face
-Currently a work in progress...
+**Incomplete Images:**
+![alt text](https://github.com/wkhademi/PixelCNN/images/FREY_Incomplete.png "FREY Incomplete")
+
+**Completed Images (Current):**
+![alt text](https://github.com/wkhademi/PixelCNN/images/FREY_Completed.png "FREY Completed")
 
 ### CIFAR-10
-Currently a work in progress...
+*Currently a work in progress...*
 
 ## Original Paper
 The original PixelCNN paper was written by Aaron van den Oord, Nal Kalchbrenner, and Koray Kavukcuoglu.  
