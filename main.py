@@ -88,14 +88,20 @@ def run(config):
 
     if (config == '--CIFAR'):
         height, width, channels = (32, 32, 3)
+        num_residuals = 7
+        num_epochs = 150
     elif (config == '--MNIST'):
         height, width, channels = (28, 28, 1)
+        num_residuals = 5 
+        num_epochs = 25
     elif (config == '--FREY'):
         height, width, channels = (28, 20, 1)
+        num_residuals = 7
+        num_epochs = 150 
 
-    network = Network(train_images, test_images, height, width, channels, config)
+    network = Network(train_images, test_images, height, width, channels, num_residuals, num_epochs, config)
 
-    network.train()
+    #network.train()
     network.test()
 
 

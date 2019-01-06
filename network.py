@@ -10,6 +10,8 @@ class Network:
                 height,
                 width,
                 channels,
+                num_residuals,
+                num_epochs,
                 config):
         self.train_inputs = train_inputs
         self.test_inputs = test_inputs
@@ -17,9 +19,9 @@ class Network:
         self.width = width
         self.channels = channels
         self.config = config
-        self.num_residuals = 5 
+        self.num_residuals = num_residuals 
         self.learning_rate = 1e-3
-        self.num_epochs = 25 
+        self.num_epochs = num_epochs 
         self.batch_size = 100 
         self.network = None
         self.loss = None
@@ -39,8 +41,8 @@ class Network:
             kernel_shape = [7, 7, self.channels, 256]
             bias_shape = [256]
         elif (self.config == '--FREY'):
-            kernel_shape = [7, 7, self.channels, 256]
-            bias_shape = [256]
+            kernel_shape = [7, 7, self.channels, 384]
+            bias_shape = [384]
 
         strides = [1, 1, 1, 1]
         mask_type = 'A'
@@ -55,14 +57,14 @@ class Network:
             if (self.config == '--MNIST'):
                 network = pixelCNNModel.residual_block(network, 64, is_training, scope)
             elif (self.config == '--FREY'):
-                network = pixelCNNModel.residual_block(network, 256, is_training, scope)
+                network = pixelCNNModel.residual_block(network, 384, is_training, scope)
 
         if (self.config == '--MNIST'):
             kernel_shape = [7, 7, 64, 64]
         elif (self.config == '--CIFAR'):
             kernel_shape = [7, 7, 256, 256]
         elif (self.config == '--FREY'):
-            kernel_shape = [7, 7, 256, 256]
+            kernel_shape = [7, 7, 384, 384]
 
         # 2 Mask Type 'B' Convolutions
         for idx in xrange(2):
@@ -79,7 +81,7 @@ class Network:
             kernel_shape = [1, 1, 256, 256*self.channels]
             bias_shape = [256*self.channels]
         elif (self.config == '--FREY'):
-            kernel_shape = [1, 1, 256, 256*self.channels]
+            kernel_shape = [1, 1, 384, 256*self.channels]
             bias_shape = [256*self.channels]
 
         network = pixelCNNModel.conv2d_layer(network, kernel_shape, bias_shape, strides, mask_type, 'conv13')
@@ -220,7 +222,8 @@ class Network:
 
         # start session and train PixelCNN
         with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
+            #sess.run(tf.global_variables_initializer())
+            saver.restore(sess, '/tmp/model.ckpt')
 
             num_batches = self.train_inputs.shape[0]/self.batch_size
             average_loss = 0
